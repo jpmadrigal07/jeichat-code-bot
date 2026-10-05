@@ -1,10 +1,18 @@
-import { JeiChat } from "./client.js";
+import {
+  isAssignedToBot,
+  isUnassignedFromBot,
+  ticketIdFromEvent,
+} from "./assignee.js";
+import { formatPlanningAssignPrompt } from "./assign-prompt.js";
+import { ticketsAssignedToBot } from "./backfill.js";
 import { defaultBaseRef, sanitizeBaseRef } from "./base-ref.js";
 import { runBuild } from "./build.js";
+import { JeiChat } from "./client.js";
 import { commandError, HELP_TEXT, parseCommand } from "./commands.js";
+import { createAssigneeDebouncer } from "./debounce.js";
 import { runDraft } from "./draft.js";
 import { isBotMentioned, stripBotMentions } from "./mention.js";
-import { loadTicketThread, ticketDisplayId } from "./plan-context.js";
+import { fetchChannel, loadTicketThread, ticketDisplayId } from "./plan-context.js";
 import { createPlanningStore } from "./planning-store.js";
 import { sendPlanningTurn } from "./planning-agent.js";
 import { startPlanServer } from "./plan-server.js";
@@ -21,6 +29,7 @@ const client = new JeiChat({
 
 const store = createPlanningStore();
 const busy = new Set();
+const assignDebouncer = createAssigneeDebouncer();
 
 client.on("ready", () => {
   console.log(
@@ -29,8 +38,80 @@ client.on("ready", () => {
   console.log(
     `In a ticket thread: @${client.user?.name} <message> | base | draft | build | help`,
   );
+  console.log(
+    "Assign me to a ticket to get a planning kickoff message in the thread.",
+  );
   startPlanServer(client, store);
+  void backfillAssignedTickets();
 });
+
+client.on("ticketUpdate", (event) => {
+  const botUserId = client.user?.userId;
+  if (!botUserId) return;
+  const ticketId = ticketIdFromEvent(event);
+
+  if (isUnassignedFromBot(event, botUserId)) {
+    assignDebouncer.cancel(ticketId);
+    return;
+  }
+  if (!isAssignedToBot(event, botUserId)) return;
+
+  assignDebouncer.schedule(ticketId, () => {
+    void promptPlanningStart(ticketId);
+  });
+});
+
+async function promptPlanningStart(ticketId) {
+  const botUserId = client.user?.userId;
+  const workspaceId = client.user?.workspaceId;
+  const botName = client.user?.name ?? "Code";
+  if (!botUserId || !workspaceId) return;
+
+  try {
+    const channel = await fetchChannel(client, workspaceId, ticketId);
+    if (!channel.parentId) return;
+    if (channel.assigneeId !== botUserId) return;
+
+    const label = ticketDisplayId(channel);
+    await client.send(
+      ticketId,
+      formatPlanningAssignPrompt(botName, label),
+    );
+  } catch (error) {
+    console.error("promptPlanningStart failed", error);
+    try {
+      await client.send(
+        ticketId,
+        "I'm assigned but couldn't load ticket details — mention me with what you want to plan.",
+      );
+    } catch (sendError) {
+      console.error("planning kickoff fallback failed", sendError);
+    }
+  }
+}
+
+async function backfillAssignedTickets() {
+  const workspaceId = client.user?.workspaceId;
+  const botUserId = client.user?.userId;
+  if (!workspaceId || !botUserId) return;
+
+  try {
+    const channels = await client.get(`/workspaces/${workspaceId}/channels`);
+    const ids = ticketsAssignedToBot(channels, botUserId);
+    console.log(
+      ids.length > 0
+        ? `Backfill: ${ids.length} ticket(s) already assigned to me — sending planning prompts.`
+        : "Backfill: no tickets assigned to me.",
+    );
+    for (const id of ids) {
+      assignDebouncer.schedule(id, () => {
+        void promptPlanningStart(id);
+      });
+    }
+  } catch (error) {
+    console.error("assigned-ticket backfill failed", error);
+  }
+}
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;

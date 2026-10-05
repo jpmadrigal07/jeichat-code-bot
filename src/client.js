@@ -42,7 +42,7 @@ export class Message {
 
 /**
  * Minimal JeiChat bot client: REST with `Authorization: Bot <token>`
- * plus Socket.IO `auth.token` for `new_message`.
+ * plus Socket.IO for `channel_event` and `new_message`.
  */
 export class JeiChat extends EventEmitter {
   constructor(options = {}) {
@@ -50,6 +50,7 @@ export class JeiChat extends EventEmitter {
     this.user = null;
     this.token = "";
     this.socket = null;
+    this.seenEventIds = new Set();
     this.apiUrl = (
       options.apiUrl ??
       process.env.JEICHAT_API_URL ??
@@ -75,6 +76,10 @@ export class JeiChat extends EventEmitter {
 
   patch(path, body) {
     return this.request("PATCH", path, body);
+  }
+
+  send(channelId, content) {
+    return this.post(`/channels/${channelId}/messages`, { content });
   }
 
   async request(method, path, body) {
@@ -104,6 +109,15 @@ export class JeiChat extends EventEmitter {
       this.socket = socket;
       socket.once("connect", () => resolve());
       socket.once("connect_error", (error) => reject(error));
+      socket.on("channel_event", (payload) => {
+        if (this.seenEventIds.has(payload.id)) return;
+        this.seenEventIds.add(payload.id);
+        if (this.seenEventIds.size > 500) {
+          const first = this.seenEventIds.values().next().value;
+          if (first) this.seenEventIds.delete(first);
+        }
+        this.emit("ticketUpdate", payload);
+      });
       socket.on("new_message", (payload) => {
         this.emit("messageCreate", new Message(this, payload));
       });

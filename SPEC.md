@@ -2,7 +2,7 @@
 
 ## Scope
 
-- **In scope:** ticket-thread planning chat, `draft` → ticket description, explicit `build` → PR.
+- **In scope:** ticket-thread planning chat, assignee kickoff prompt, `draft` → ticket description, explicit `build` → PR.
 - **Out of scope:** assignee auto-fix (`jeichat-fixer-bot`), bug label QA (`jeichat-bug-checker-bot`), workspace “Create bot” tokens used for customer automations.
 
 ## Commands (after `@<bot name>`)
@@ -17,6 +17,7 @@
 
 ## Session rules
 
+- When this bot becomes the **assignee** on a ticket, it posts a kickoff message asking what to plan (same pattern as assign on live `assignee_changed` events; backfill on bot restart).
 - **One planning Cursor agent per ticket channel** while planning. Planning uses Cursor **`mode: plan`** (read/explore, no PR); **`build`** uses **`mode: agent`** + `autoCreatePR`.
 - **`build` is always a new agent** — separate from planning.
 - If resume fails (expired id, error): create a new planning agent; optional `GET /plan/:channelId` supplies thread transcript for seeding.

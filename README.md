@@ -12,12 +12,13 @@ This is **not** the fixer. Assignee-driven bug fixes live in [`jeichat-fixer-bot
 
 ## Flow
 
-1. In a **ticket thread**, `@Code let's scope the settings page change…` — first message creates a Cursor planning agent; later messages **`Agent.resume`** the same id (stored per ticket in Redis or memory).
+1. Assign **Code** on the ticket (or create with that assignee) — the bot asks what to plan in the thread.
+2. In the **ticket thread**, `@Code let's scope the settings page change…` — first message creates a Cursor planning agent; later messages **`Agent.resume`** the same id (stored per ticket in Redis or memory).
 2. `@Code draft` — writes **Branch / Goal / Done when / UI refs** into the ticket description and clears the planning session.
 3. You edit the description if needed.
 4. `@Code build` — always a **fresh** `Agent.create` coding run (PR). Never reuses the planning session.
 
-Features do **not** auto-build on assign. Bugs still go through checker → fixer, not this bot.
+Features do **not** auto-build on assign (only a planning kickoff). Bugs still go through checker → fixer, not this bot.
 
 ## Prerequisites
 
