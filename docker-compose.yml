@@ -1,0 +1,5 @@
+# Optional. Coolify should use the Dockerfile as a single Application (no domain).
+services:
+  code-bot:
+    build: .
+    restart: unless-stopped

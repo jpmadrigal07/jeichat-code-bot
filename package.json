@@ -1,0 +1,16 @@
+{
+  "name": "jeichat-code-bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.js",
+    "dev": "bun --watch src/index.js",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.31",
+    "@upstash/redis": "^1.38.0",
+    "socket.io-client": "^4.8.3"
+  }
+}
