@@ -47,15 +47,35 @@ async function runPlanningAgentSend(agent, userMessage) {
   return readAssistantText(run);
 }
 
+function planningRetryDelayMs(attempt) {
+  return 2500 * (attempt + 1);
+}
+
 export async function sendPlanningTurn(params) {
-  try {
-    return await sendPlanningTurnInner(params);
-  } catch (error) {
-    if (!isRecoverableCursorRunError(error)) throw error;
-    console.warn("planning failed, retrying with a fresh cloud agent", error);
-    await params.store.clear(params.channelId);
-    return sendPlanningTurnInner(params, { forceNewAgent: true, textOnly: true });
+  const maxAttempts = 3;
+  let lastError;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await sendPlanningTurnInner(params, {
+        forceNewAgent: attempt > 0,
+        textOnly: attempt > 0,
+      });
+    } catch (error) {
+      lastError = error;
+      if (!isRecoverableCursorRunError(error) || attempt === maxAttempts - 1) {
+        throw error;
+      }
+      console.warn(
+        `planning attempt ${attempt + 1} failed, retrying with a fresh cloud agent`,
+        error,
+      );
+      await params.store.clear(params.channelId);
+      await new Promise((resolve) =>
+        setTimeout(resolve, planningRetryDelayMs(attempt)),
+      );
+    }
   }
+  throw lastError;
 }
 
 async function sendPlanningTurnInner(
@@ -208,10 +228,18 @@ export const DRAFT_FINAL_PROMPT = `Write the final ticket specification as markd
 ## Goal
 ## Done when
 ## UI refs
+## Test account
+## Routes
+## Verify commands
+## Verify scope
 
 Base ref is the git branch to branch FROM (not the feature branch name).
 Under ## Branch put ONLY the exact feature branch name given in the prompt (JeiChat ticket branch code, e.g. GEN-19-my-title-slug). Never use cursor/… or other agent-invented branch names.
-Output the full markdown now — all five sections with real content from the planning thread. No status lines (e.g. "Verifying…"), no preamble, no placeholders.
+Output the full markdown now — all nine sections with real content from the planning thread. No status lines (e.g. "Verifying…"), no preamble, no placeholders.
 Use checkboxes under Done when.
 Under UI refs, list repo anchors you verified: file paths, component names, and/or app routes (use "N/A" only for non-UI work).
+Under ## Test account: sign-in email and password for browser verification, or "N/A" if no auth.
+Under ## Routes: full http://localhost… URLs and/or app paths to open when verifying (one per line). Use "N/A" for non-UI work.
+Under ## Verify commands: exact shell commands to run (e.g. cd apps/web && bun run check-types). Prefer the smallest set that proves the change.
+Under ## Verify scope: either \`browser\` (exercise UI) or \`static-only\` (typecheck/tests only — no dev server).
 Reference any screenshots from the thread when describing UI. Base everything on this planning conversation, the thread, and the codebase. No preamble.`;

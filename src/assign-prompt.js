@@ -10,7 +10,7 @@ export function formatPlanningAssignPrompt(botName, ticketLabel) {
     "When we're aligned:",
     `- \`${mention} base <branch>\` — git branch to branch **from** (I'll ask if unset)`,
     `- Keep chatting with \`${mention}\` — same planning session, repo-aware`,
-    `- \`${mention} draft\` — write Base ref / Branch / Goal / Done when / UI refs into the ticket`,
+    `- \`${mention} draft\` — write the full spec (incl. test account, routes, verify commands) into the ticket`,
     `- \`${mention} build\` — **only** when the description is ready for a PR`,
     "",
     "What should this ticket deliver?",

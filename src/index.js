@@ -7,7 +7,9 @@ import { formatPlanningAssignPrompt } from "./assign-prompt.js";
 import { ticketsAssignedToBot } from "./backfill.js";
 import { defaultBaseRef, sanitizeBaseRef } from "./base-ref.js";
 import { runBuild } from "./build.js";
-import { JeiChat } from "./client.js";
+import { runManualVerification } from "./post-build-verify.js";
+import { suggestedBranchForTicket } from "./ticket-branch.js";
+import { ApiError, JeiChat } from "./client.js";
 import { commandError, HELP_TEXT, parseCommand } from "./commands.js";
 import { createAssigneeDebouncer } from "./debounce.js";
 import { runDraft } from "./draft.js";
@@ -16,6 +18,7 @@ import { fetchChannel, loadTicketThread, ticketDisplayId } from "./plan-context.
 import { createPlanningStore } from "./planning-store.js";
 import { sendPlanningTurn } from "./planning-agent.js";
 import { startPlanServer } from "./plan-server.js";
+import { ticketRuns } from "./ticket-run-guard.js";
 
 const token = process.env.JEICHAT_BOT_TOKEN?.trim();
 if (!token) {
@@ -42,7 +45,11 @@ client.on("ready", () => {
     "Assign me to a ticket to get a planning kickoff message in the thread.",
   );
   startPlanServer(client, store);
-  void backfillAssignedTickets();
+  if (process.env.CODE_BOT_SKIP_ASSIGN_BACKFILL?.trim() !== "1") {
+    void backfillAssignedTickets();
+  } else {
+    console.log("Assign backfill skipped (CODE_BOT_SKIP_ASSIGN_BACKFILL=1).");
+  }
 });
 
 client.on("ticketUpdate", (event) => {
@@ -142,6 +149,16 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  if (
+    (command?.name === "build" || command?.name === "verify") &&
+    ticketRuns.isActive(message.channelId)
+  ) {
+    await message.reply(
+      ticketRuns.conflictMessage(ticketRuns.get(message.channelId)),
+    );
+    return;
+  }
+
   if (busy.has(message.channelId)) {
     await message.reply("Still working on this ticket — try again in a moment.");
     return;
@@ -169,6 +186,7 @@ client.on("messageCreate", async (message) => {
           desc
             ? `Description: ${desc.length} chars`
             : "Description: empty — run `draft` after planning",
+          ticketRuns.statusLine(message.channelId),
         ].join("\n"),
       );
       return;
@@ -198,7 +216,7 @@ client.on("messageCreate", async (message) => {
         store,
         context,
       });
-      await message.reply(reply);
+      await client.send(message.channelId, reply);
       return;
     }
 
@@ -207,11 +225,29 @@ client.on("messageCreate", async (message) => {
         "Starting a **new** coding agent from the ticket description (runs on Cursor cloud; may take a while)…",
       );
       const reply = await runBuild({
+        client,
         context,
         store,
         channelId: message.channelId,
       });
-      await message.reply(reply);
+      await client.send(message.channelId, reply);
+      return;
+    }
+
+    if (command?.name === "verify") {
+      await message.reply(
+        "Starting verification on the PR branch (tests + screenshots; may take a while on Cursor cloud)…",
+      );
+      const summary = await runManualVerification(
+        client,
+        context,
+        message.channelId,
+        { branchHint: suggestedBranchForTicket(context) },
+        { skipStatusMessage: true },
+      );
+      if (summary) {
+        await client.send(message.channelId, summary);
+      }
       return;
     }
 
@@ -231,10 +267,19 @@ client.on("messageCreate", async (message) => {
       triggerAttachments: message.attachments,
     });
     const prefix = resumed ? "" : "_Started a new planning session._\n\n";
-    await message.reply(`${prefix}${reply}`);
+    await client.send(message.channelId, `${prefix}${reply}`);
   } catch (error) {
-    console.error("handler failed", error);
-    await message.reply(commandError(error));
+    console.error(
+      "handler failed",
+      error,
+      error instanceof ApiError ? error.body : undefined,
+    );
+    try {
+      await client.send(message.channelId, commandError(error));
+    } catch (sendError) {
+      console.error("could not post error reply", sendError);
+      await message.reply(commandError(error));
+    }
   } finally {
     busy.delete(message.channelId);
   }

@@ -51,7 +51,15 @@ g
 ## Done when
 - [ ] x
 ## UI refs
-path`),
+path
+## Test account
+N/A
+## Routes
+N/A
+## Verify commands
+cd apps/web && bun run check-types
+## Verify scope
+static-only`),
     ).toBe(true);
   });
 });

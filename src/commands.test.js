@@ -5,6 +5,7 @@ describe("parseCommand", () => {
   it("parses draft and build", () => {
     expect(parseCommand("draft")).toEqual({ name: "draft" });
     expect(parseCommand("build")).toEqual({ name: "build" });
+    expect(parseCommand("verify")).toEqual({ name: "verify" });
     expect(parseCommand("status")).toEqual({ name: "status" });
     expect(parseCommand("base develop")).toEqual({
       name: "base",

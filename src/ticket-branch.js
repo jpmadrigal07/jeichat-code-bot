@@ -35,12 +35,23 @@ export function suggestedBranchForTicket(context) {
   );
 }
 
+export function parseBranchFromSpec(description) {
+  const text = String(description ?? "");
+  const match = text.match(/^##\s*Branch\s*\r?\n([^\r\n#]+)/im);
+  const branch = match?.[1]?.trim();
+  return branch || null;
+}
+
 export const TICKET_SPEC_SECTIONS = [
   "## Base ref",
   "## Branch",
   "## Goal",
   "## Done when",
   "## UI refs",
+  "## Test account",
+  "## Routes",
+  "## Verify commands",
+  "## Verify scope",
 ];
 
 export function missingTicketSpecSections(spec) {

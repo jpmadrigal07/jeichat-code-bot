@@ -21,13 +21,17 @@ export async function loadTicketThread(client, workspaceId, channelId) {
     process.env.JEICHAT_WEB_ORIGIN ?? "http://localhost:3001"
   ).replace(/\/$/, "");
 
+  const ticketUrl = channel.parentId
+    ? `${webOrigin}/w/${workspaceId}/c/${channel.parentId}/b/${channelId}`
+    : `${webOrigin}/w/${workspaceId}/c/${channelId}`;
+
   return {
     channel,
     boardTicketKey,
     github,
     messages,
     transcript,
-    ticketUrl: `${webOrigin}/w/${workspaceId}/c/${channelId}`,
+    ticketUrl,
     isTicket: Boolean(channel.parentId),
   };
 }

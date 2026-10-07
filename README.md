@@ -1,6 +1,6 @@
 # JeiChat code bot (`jeichat-code-bot`)
 
-Standalone bot for **ticket planning**: chat in the thread → **`draft`** fills the description → you review → **`build`** runs a **new** Cursor cloud agent and opens a PR.
+Standalone bot for **ticket planning**: chat in the thread → **`draft`** fills the description → you review → **`build`** runs a **new** Cursor cloud agent and opens a PR → optional **verification** (tests + screenshots, ported from [`jeichat-reviewer-bot`](../jeichat-reviewer-bot)).
 
 This is **not** the fixer. Assignee-driven bug fixes live in [`jeichat-fixer-bot`](../jeichat-fixer-bot). Live-site bug checking is [`jeichat-bug-checker-bot`](../jeichat-bug-checker-bot).
 
@@ -14,9 +14,9 @@ This is **not** the fixer. Assignee-driven bug fixes live in [`jeichat-fixer-bot
 
 1. Assign **Code** on the ticket (or create with that assignee) — the bot asks what to plan in the thread.
 2. In the **ticket thread**, `@Code let's scope the settings page change…` — first message creates a Cursor planning agent; later messages **`Agent.resume`** the same id (stored per ticket in Redis or memory).
-2. `@Code draft` — writes **Branch / Goal / Done when / UI refs** into the ticket description and clears the planning session.
+2. `@Code draft` — writes the full ticket spec (goal, done when, test account, routes, verify commands, etc.) into the description and clears the planning session.
 3. You edit the description if needed.
-4. `@Code build` — always a **fresh** `Agent.create` coding run (PR). Never reuses the planning session.
+4. `@Code build` — always a **fresh** `Agent.create` coding run (PR). Never reuses the planning session. By default, when the build finishes, a **verification** agent runs tests/browser checks and posts PNG screenshots to the thread (`@Code verify` to re-run).
 
 Features do **not** auto-build on assign (only a planning kickoff). Bugs still go through checker → fixer, not this bot.
 
@@ -55,6 +55,15 @@ Set `PLAN_HTTP_PORT` (and `PLAN_HTTP_SECRET`) to expose:
 
 Useful when a planning agent id expired and you need to re-seed from the JeiChat thread.
 
+## Cloud agents (target repo)
+
+So build/verify agents start fast and do not hunt for `.env` or routes:
+
+1. In **Cursor → Environment** for the linked repo: paste [`templates/cursor-environment-install.sh`](./templates/cursor-environment-install.sh) into **Install**; keep secrets in Environment **Secrets** (not in the script).
+2. Copy [`templates/monorepo-AGENTS.md`](./templates/monorepo-AGENTS.md) to that repo as **`AGENTS.md`** (ports, health URL, bootstrap, test DB).
+3. On the code bot, set `VERIFY_APP_WEB_ORIGIN` / `VERIFY_APP_API_ORIGIN` if they differ from `JEICHAT_WEB_ORIGIN` / `JEICHAT_API_URL`.
+4. Fill **Test account**, **Routes**, **Verify commands**, and **Verify scope** on each ticket (`draft` generates these sections).
+
 ## Deploy
 
 Same pattern as the fixer: Coolify **Application** from `Dockerfile`, no public domain, env vars from `.env.example`.
@@ -65,7 +74,8 @@ Same pattern as the fixer: Coolify **Application** from `Dockerfile`, no public 
 |----------|---------|
 | `JEICHAT_BOT_TOKEN` | This bot’s token |
 | `JEICHAT_API_URL` | API origin |
-| `JEICHAT_WEB_ORIGIN` | Ticket links in prompts |
+| `JEICHAT_WEB_ORIGIN` | Ticket links in prompts; default verify web origin |
+| `VERIFY_APP_WEB_ORIGIN` / `VERIFY_APP_API_ORIGIN` | Dev URLs in verify prompts for the app under test |
 | `CURSOR_API_KEY` | Cursor SDK |
 | `CURSOR_RUNTIME` | `cloud` (default) or `local` |
 | `CURSOR_REPO_URL` / `CURSOR_REPO_REF` | Target repo for build |
