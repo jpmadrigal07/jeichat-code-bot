@@ -78,6 +78,8 @@ Same pattern as the fixer: Coolify **Application** from `Dockerfile`, no public 
 | `VERIFY_APP_WEB_ORIGIN` / `VERIFY_APP_API_ORIGIN` | Dev URLs in verify prompts for the app under test |
 | `CURSOR_API_KEY` | Cursor SDK |
 | `CURSOR_RUNTIME` | `cloud` (default) or `local` |
+| `CURSOR_MODEL` | Model id (default `composer-2.5`, **non-fast** — Cursor’s cloud default is fast unless `fast=false` is sent) |
+| `CURSOR_MODEL_FAST` | Set `1` to use Composer fast variant |
 | `CURSOR_REPO_URL` / `CURSOR_REPO_REF` | Target repo for build |
 | `UPSTASH_REDIS_*` | Shared `planningAgentId` across restarts |
 | `PLANNING_AGENT_TTL_SECONDS` | Redis / memory TTL (default 7d) |

@@ -1,5 +1,40 @@
 import { MISSING_GITHUB_LINK_MESSAGE, resolveRepoUrl } from "./github-repo.js";
 
+/** @returns {import("@cursor/sdk").ModelSelection} */
+export function resolveCursorModelSelection() {
+  const raw = process.env.CURSOR_MODEL?.trim() || "composer-2.5";
+  const wantsFastSuffix = /-fast$/i.test(raw);
+  const id = raw.replace(/-fast$/i, "") || "composer-2.5";
+
+  const fastFlag = process.env.CURSOR_MODEL_FAST?.trim().toLowerCase();
+  let useFast =
+    wantsFastSuffix ||
+    fastFlag === "1" ||
+    fastFlag === "true" ||
+    fastFlag === "yes";
+  if (
+    fastFlag === "0" ||
+    fastFlag === "false" ||
+    fastFlag === "no"
+  ) {
+    useFast = false;
+  }
+
+  if (id === "composer-2.5" || id === "composer-2") {
+    return {
+      id,
+      params: [{ id: "fast", value: useFast ? "true" : "false" }],
+    };
+  }
+
+  return { id };
+}
+
+/** Per-send model (cloud defaults to fast unless params.fast=false). */
+export function cursorSendOptions(overrides = {}) {
+  return { model: resolveCursorModelSelection(), ...overrides };
+}
+
 export function cursorAgentOptions(overrides = {}) {
   const apiKey = process.env.CURSOR_API_KEY?.trim();
   if (!apiKey) {
@@ -8,7 +43,7 @@ export function cursorAgentOptions(overrides = {}) {
     );
   }
 
-  const model = { id: process.env.CURSOR_MODEL?.trim() || "composer-2.5" };
+  const model = resolveCursorModelSelection();
   const repoUrl =
     overrides.repoUrl?.trim() ||
     (overrides.context ? resolveRepoUrl(overrides.context) : null) ||

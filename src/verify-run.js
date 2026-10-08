@@ -1,5 +1,5 @@
 import { Agent, CursorAgentError } from "@cursor/sdk";
-import { cursorAgentOptions } from "./cursor-options.js";
+import { cursorAgentOptions, cursorSendOptions } from "./cursor-options.js";
 import { enrichGitContextFromPullRequest } from "./github-pr.js";
 import { resolveRepoUrl } from "./github-repo.js";
 import { ticketDisplayId } from "./plan-context.js";
@@ -201,9 +201,10 @@ export async function runCodeVerification(ticket, ctx, options = {}) {
     if (typeof options.onRunStarted === "function") {
       options.onRunStarted({ agentId });
     }
-    const run = await agent.send(codeVerifyPrompt(ticket, promptCtx), {
-      mode: "agent",
-    });
+    const run = await agent.send(
+      codeVerifyPrompt(ticket, promptCtx),
+      cursorSendOptions({ mode: "agent" }),
+    );
     const result = await waitForRun(run, verifyRunTimeoutMs());
     if (result.status !== "finished") {
       return `Verification did not finish (${result.status}${

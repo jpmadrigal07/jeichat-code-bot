@@ -1,6 +1,6 @@
 import { Agent, CursorAgentError } from "@cursor/sdk";
 import { readAssistantText } from "./cursor-run.js";
-import { truncateReply } from "./cursor-options.js";
+import { cursorSendOptions, truncateReply } from "./cursor-options.js";
 import { resolveStartingRef } from "./base-ref.js";
 import {
   DRAFT_FINAL_PROMPT,
@@ -28,7 +28,7 @@ async function requestDraftSpec({
       await using agent = await Agent.resume(agentId, {
         ...agentOpts,
       });
-      const run = await agent.send(draftBody, PLANNING_SEND);
+      const run = await agent.send(draftBody, cursorSendOptions(PLANNING_SEND));
       const text = (await readAssistantText(run)).trim();
       if (isCompleteTicketSpec(text)) return text;
     } catch (error) {
@@ -40,7 +40,7 @@ async function requestDraftSpec({
     ...agentOpts,
     name: "JeiChat ticket planning",
   });
-  const run = await agent.send(fallbackBody, PLANNING_SEND);
+  const run = await agent.send(fallbackBody, cursorSendOptions(PLANNING_SEND));
   const text = (await readAssistantText(run)).trim();
   if (!isCompleteTicketSpec(text)) {
     const missing = missingTicketSpecSections(text);

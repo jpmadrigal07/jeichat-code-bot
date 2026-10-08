@@ -1,6 +1,6 @@
 import { Agent, CursorAgentError } from "@cursor/sdk";
 import { readAssistantText, isRecoverableCursorRunError } from "./cursor-run.js";
-import { cursorAgentOptions } from "./cursor-options.js";
+import { cursorAgentOptions, cursorSendOptions } from "./cursor-options.js";
 import { defaultBaseRef, parseBaseRefFromMessage, resolveStartingRef } from "./base-ref.js";
 import { resolveRepoUrl } from "./github-repo.js";
 import {
@@ -43,7 +43,7 @@ function planningAgentOptions(context, startingRef) {
 }
 
 async function runPlanningAgentSend(agent, userMessage) {
-  const run = await agent.send(userMessage, PLANNING_SEND);
+  const run = await agent.send(userMessage, cursorSendOptions(PLANNING_SEND));
   return readAssistantText(run);
 }
 

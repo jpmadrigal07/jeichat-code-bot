@@ -1,6 +1,10 @@
 import { Agent, CursorAgentError } from "@cursor/sdk";
 import { isRecoverableCursorRunError } from "./cursor-run.js";
-import { cursorAgentOptions, truncateReply } from "./cursor-options.js";
+import {
+  cursorAgentOptions,
+  cursorSendOptions,
+  truncateReply,
+} from "./cursor-options.js";
 import { resolveStartingRef } from "./base-ref.js";
 import { ticketDisplayId } from "./plan-context.js";
 import { suggestedBranchForTicket } from "./ticket-branch.js";
@@ -32,6 +36,7 @@ function buildPrompt(context, description, startingRef) {
     description,
     "",
     "Implement against **Goal** and **Done when**. For UI work, use **UI refs** and **Routes** from the spec.",
+    "Do **not** start `bun run dev`, run browser automation, or capture verification screenshots — a separate **verify** agent tests the PR after you open it. Focus on code, targeted typecheck/lint for files you touch, and the PR.",
     "Open a PR when done. Put the ticket id and URL in the PR body.",
   );
 
@@ -58,7 +63,7 @@ async function startBuildAgent({ context, store, channelId, description, startin
     name: "JeiChat ticket build",
   });
 
-  const run = await agent.send(text, { mode: "agent" });
+  const run = await agent.send(text, cursorSendOptions({ mode: "agent" }));
   const agentId = agent.id ?? agent.agentId ?? null;
 
   return {
