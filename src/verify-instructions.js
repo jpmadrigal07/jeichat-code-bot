@@ -33,6 +33,20 @@ function formatBrowseUrls(urls) {
   return `   - Open these URLs/paths from **## Routes**:\n${list}`;
 }
 
+/** Screenshots are posted to the ticket as proof — capture only when UI is ready. */
+function screenshotProofBullets(isCloud, artifactDir, maxShots, localDir) {
+  const pathLine = isCloud
+    ? `   - Save up to **${maxShots}** PNG proof screenshots under \`${artifactDir}/\` (e.g. \`${artifactDir}/01-done-when.png\`). The code bot posts them to the ticket (max ${maxShots}).`
+    : `   - Save up to **${maxShots}** PNG proof screenshots under \`./${localDir}/\` in the repo root.`;
+
+  return [
+    pathLine,
+    "   - **Screenshot proof:** Each PNG must show the **Done when** behavior clearly. Reviewers treat these as evidence — unusable shots count as incomplete verification.",
+    "   - **Wait before capture:** Do not screenshot while the page is still loading. Wait until spinners/skeletons are gone, main content and images are visible, and dialogs or sheets are fully open. Use browser snapshot/polling and **retry** after a few seconds if anything still says Loading or looks empty.",
+    "   - Re-navigate or reopen the flow and capture again if the first shot was mid-transition, blurred, or missing the element under test.",
+  ];
+}
+
 export function verificationInstructions(ctx = {}) {
   const description = ctx.description ?? "";
   const verifyScope =
@@ -94,15 +108,14 @@ export function verificationInstructions(ctx = {}) {
   }
 
   if (!staticOnly) {
-    if (isCloud) {
-      lines.push(
-        `   - Save up to **${maxShots}** PNG screenshots under \`${artifactDir}/\` (e.g. \`${artifactDir}/01-repro.png\`). The code bot posts them to the ticket (max ${maxShots}).`,
-      );
-    } else {
-      lines.push(
-        `   - Save up to **${maxShots}** PNG screenshots under \`./${VERIFICATION_SCREENSHOT_PREFIX}/\` in the repo root.`,
-      );
-    }
+    lines.push(
+      ...screenshotProofBullets(
+        isCloud,
+        artifactDir,
+        maxShots,
+        VERIFICATION_SCREENSHOT_PREFIX,
+      ),
+    );
   }
 
   lines.push(
