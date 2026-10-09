@@ -4,6 +4,7 @@ import {
   ticketIdFromEvent,
 } from "./assignee.js";
 import { formatPlanningAssignPrompt } from "./assign-prompt.js";
+import { shouldSendPlanningKickoff } from "./planning-kickoff.js";
 import { ticketsAssignedToBot } from "./backfill.js";
 import { defaultBaseRef, sanitizeBaseRef } from "./base-ref.js";
 import { runBuild } from "./build.js";
@@ -45,11 +46,7 @@ client.on("ready", () => {
     "Assign me to a ticket to get a planning kickoff message in the thread.",
   );
   startPlanServer(client, store);
-  if (process.env.CODE_BOT_SKIP_ASSIGN_BACKFILL?.trim() !== "1") {
-    void backfillAssignedTickets();
-  } else {
-    console.log("Assign backfill skipped (CODE_BOT_SKIP_ASSIGN_BACKFILL=1).");
-  }
+  void backfillAssignedTickets();
 });
 
 client.on("ticketUpdate", (event) => {
@@ -64,11 +61,11 @@ client.on("ticketUpdate", (event) => {
   if (!isAssignedToBot(event, botUserId)) return;
 
   assignDebouncer.schedule(ticketId, () => {
-    void promptPlanningStart(ticketId);
+    void promptPlanningStart(ticketId, "assign");
   });
 });
 
-async function promptPlanningStart(ticketId) {
+async function promptPlanningStart(ticketId, source = "assign") {
   const botUserId = client.user?.userId;
   const workspaceId = client.user?.workspaceId;
   const botName = client.user?.name ?? "Code";
@@ -78,6 +75,7 @@ async function promptPlanningStart(ticketId) {
     const channel = await fetchChannel(client, workspaceId, ticketId);
     if (!channel.parentId) return;
     if (channel.assigneeId !== botUserId) return;
+    if (!shouldSendPlanningKickoff(channel, { source })) return;
 
     const label = ticketDisplayId(channel);
     await client.send(
@@ -105,14 +103,15 @@ async function backfillAssignedTickets() {
   try {
     const channels = await client.get(`/workspaces/${workspaceId}/channels`);
     const ids = ticketsAssignedToBot(channels, botUserId);
+    const backfillOn = process.env.CODE_BOT_ASSIGN_BACKFILL?.trim() === "1";
     console.log(
       ids.length > 0
-        ? `Backfill: ${ids.length} ticket(s) already assigned to me — sending planning prompts.`
+        ? `Backfill: ${ids.length} ticket(s) assigned to me${backfillOn ? " — may send kickoffs where spec is empty" : " (kickoffs off; set CODE_BOT_ASSIGN_BACKFILL=1 to enable)"}.`
         : "Backfill: no tickets assigned to me.",
     );
     for (const id of ids) {
       assignDebouncer.schedule(id, () => {
-        void promptPlanningStart(id);
+        void promptPlanningStart(id, "backfill");
       });
     }
   } catch (error) {

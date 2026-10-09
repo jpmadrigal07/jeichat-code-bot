@@ -3,6 +3,7 @@ import { cursorAgentOptions, cursorSendOptions } from "./cursor-options.js";
 import { enrichGitContextFromPullRequest } from "./github-pr.js";
 import { resolveRepoUrl } from "./github-repo.js";
 import { ticketDisplayId } from "./plan-context.js";
+import { loadVerifyBootConfig } from "./verify-boot-config.js";
 import { verificationInstructions } from "./verify-instructions.js";
 import { verifyRunTimeoutMs } from "./verify-timing.js";
 
@@ -15,13 +16,14 @@ function formatGitBlock(ctx) {
   return lines.join("\n");
 }
 
-export function codeVerifyPrompt(ticket, ctx) {
+export function codeVerifyPrompt(ticket, ctx, bootConfig = null) {
   const pageUrl = ticket.pageUrl?.trim();
   const description = ticket.description?.trim() || "(empty)";
   const verifyBlock = verificationInstructions({
     pageUrl,
     description,
     runtime: process.env.CURSOR_RUNTIME,
+    bootConfig,
   });
 
   const checkoutNote = ctx.usedBaseRefFallback && ctx.branch
@@ -188,6 +190,10 @@ export async function runCodeVerification(ticket, ctx, options = {}) {
     return "I need a linked **GitHub PR** on this ticket or a known feature branch before I can verify.";
   }
 
+  const bootRef =
+    enriched.headSha ?? enriched.branch ?? enriched.startingRef ?? null;
+  const bootConfig = await loadVerifyBootConfig(ticket.repoUrl, bootRef);
+
   let agent;
   let promptCtx = enriched;
   try {
@@ -202,7 +208,7 @@ export async function runCodeVerification(ticket, ctx, options = {}) {
       options.onRunStarted({ agentId });
     }
     const run = await agent.send(
-      codeVerifyPrompt(ticket, promptCtx),
+      codeVerifyPrompt(ticket, promptCtx, bootConfig),
       cursorSendOptions({ mode: "agent" }),
     );
     const result = await waitForRun(run, verifyRunTimeoutMs());

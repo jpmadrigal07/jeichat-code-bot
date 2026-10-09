@@ -63,6 +63,7 @@ So build/verify agents start fast and do not hunt for `.env` or routes:
 2. Copy [`templates/monorepo-AGENTS.md`](./templates/monorepo-AGENTS.md) to that repo as **`AGENTS.md`** (ports, health URL, bootstrap, test DB).
 3. On the code bot, set `VERIFY_APP_WEB_ORIGIN` / `VERIFY_APP_API_ORIGIN` if they differ from `JEICHAT_WEB_ORIGIN` / `JEICHAT_API_URL`.
 4. Fill **Test account**, **Routes**, **Verify commands**, and **Verify scope** on each ticket (`draft` generates these sections).
+5. Optional: set **`VERIFY_GLOBAL_BOOT_COMMANDS`** (or **`VERIFY_BOOT_PACKAGES`**) on the bot when every verify for that deployment needs the same install/build prelude. Otherwise rely on **## Verify commands** on each ticket.
 
 ## Deploy
 

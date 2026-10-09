@@ -5,6 +5,7 @@ import {
   parseVerifyScope,
   resolveVerifyBrowseUrls,
 } from "./verify-spec.js";
+import { cleanInstallVerifyBullets } from "./verify-boot.js";
 import { verifyDevStack } from "./verify-stack.js";
 
 /** Cursor Cloud stores run outputs under this directory (also visible via Agent.listArtifacts). */
@@ -15,7 +16,7 @@ export const VERIFICATION_SCREENSHOT_PREFIX = "after-fix";
 /**
  * Prompt block: run the app, exercise the ticket spec, save proof screenshots.
  * Shared with jeichat-reviewer-bot.
- * @param {{ pageUrl?: string | null; runtime?: string; description?: string | null; verifyScope?: 'browser' | 'static-only'; browseUrls?: string[]; verifyCommands?: string | null }} ctx
+ * @param {{ pageUrl?: string | null; runtime?: string; description?: string | null; verifyScope?: 'browser' | 'static-only'; browseUrls?: string[]; verifyCommands?: string | null; bootConfig?: import("./verify-boot-config.js").VerifyBootConfig | null }} ctx
  */
 function lightVerifyEnabled() {
   const raw = process.env.REVIEWER_LIGHT_VERIFY?.trim().toLowerCase();
@@ -70,6 +71,7 @@ export function verificationInstructions(ctx = {}) {
   const commandsBullet = verifyCommands
     ? `   - Run these **## Verify commands** from the spec (adjust only if the diff clearly requires more):\n\`\`\`\n${verifyCommands}\n\`\`\``
     : "   - Run the smallest commands that prove the change (see **## Verify commands** in the spec when present).";
+  const cleanInstallBullets = cleanInstallVerifyBullets(ctx.bootConfig ?? null);
 
   const lines = [];
 
@@ -79,6 +81,7 @@ export function verificationInstructions(ctx = {}) {
       ...(envBullet ? [envBullet] : []),
       "   - Read the PR diff first.",
       commandsBullet,
+      ...cleanInstallBullets,
       "   - Do **not** start the dev server or walk UI unless the spec or diff proves you must.",
     );
   } else if (light) {
@@ -87,6 +90,7 @@ export function verificationInstructions(ctx = {}) {
       ...(envBullet ? [envBullet] : []),
       "   - Read the PR diff first. Only run commands needed for the files you changed.",
       commandsBullet,
+      ...cleanInstallBullets,
       "   - Prefer targeted checks over the full monorepo suite unless the diff is wide.",
       "   - Start `bun run dev` **only** if you must exercise UI; skip DB migrate unless the diff touches schema/migrations.",
       "   - When auth is required, sign in with **## Test account** in the ticket spec (do not invent credentials or commit them).",
@@ -99,6 +103,7 @@ export function verificationInstructions(ctx = {}) {
       ...(envBullet ? [envBullet] : []),
       "   - Run `bun run test` from the monorepo root (or the smallest relevant package tests).",
       commandsBullet,
+      ...cleanInstallBullets,
       "   - Apply DB migrations if schema changed: `cd apps/api && bun run db:migrate`.",
       `   - Start the stack: \`bun run dev\` (web ${web}). Wait until \`curl -sf ${healthUrl}\` succeeds.`,
       "   - Walk through **Done when** in the browser. Use **## Test account** when auth is required.",

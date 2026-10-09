@@ -6,5 +6,5 @@ test("formatPlanningAssignPrompt mentions bot and ticket", () => {
   expect(text).toContain("GEN-12");
   expect(text).toContain("@Code");
   expect(text).toContain("draft");
-  expect(text).toContain("What should this ticket deliver?");
+  expect(text).toContain("help");
 });

@@ -37,12 +37,30 @@ curl -sf http://localhost:3002/health
 
 Web app default: `http://localhost:3001` (set ports in your repo docs if different).
 
+## Clean verify (cloud agents)
+
+Verification should assume a **clean install**, not an already-running dev stack:
+
+1. `bun install` at the repo root (lockfile committed).
+2. Run **## Verify commands** from the JeiChat ticket (and any global boot the code bot lists in the verify prompt).
+3. Only then exercise **Done when** in the browser and capture screenshots.
+
+Do **not** mark PASS from UI proof alone if any required build step would fail on a fresh clone.
+
 ## Verification
 
 - **Test login:** use **## Test account** in the JeiChat ticket description (not cloud secrets).
 - **URLs to open:** **## Routes** in the ticket description.
 - **Commands:** **## Verify commands** in the ticket (prefer targeted typecheck/tests).
 - **## Verify scope:** `static-only` = no browser/dev server unless a command requires it; `browser` = exercise **Done when** in the browser MCP.
+
+Example **## Verify commands** on a ticket:
+
+```bash
+bun install
+cd apps/messages-api && bun run build
+cd apps/web && bun run check-types
+```
 
 ## Test data
 

@@ -240,6 +240,6 @@ Use checkboxes under Done when.
 Under UI refs, list repo anchors you verified: file paths, component names, and/or app routes (use "N/A" only for non-UI work).
 Under ## Test account: sign-in email and password for browser verification, or "N/A" if no auth.
 Under ## Routes: full http://localhost… URLs and/or app paths to open when verifying (one per line). Use "N/A" for non-UI work.
-Under ## Verify commands: exact shell commands to run (e.g. cd apps/web && bun run check-types). Prefer the smallest set that proves the change.
+Under ## Verify commands: start with `bun install`, then builds/tests for packages the diff touches (e.g. `cd apps/messages-api && bun run build`). Prefer the smallest set that proves the change.
 Under ## Verify scope: either \`browser\` (exercise UI) or \`static-only\` (typecheck/tests only — no dev server).
 Reference any screenshots from the thread when describing UI. Base everything on this planning conversation, the thread, and the codebase. No preamble.`;

@@ -53,7 +53,7 @@ Human edits the description before `build`.
 
 ### Cloud agent bootstrap (target repo)
 
-Copy [`templates/monorepo-AGENTS.md`](./templates/monorepo-AGENTS.md) to the linked repo as `AGENTS.md`, and use [`templates/cursor-environment-install.sh`](./templates/cursor-environment-install.sh) in the Cursor Environment **install** script.
+Copy [`templates/monorepo-AGENTS.md`](./templates/monorepo-AGENTS.md) to the linked repo as `AGENTS.md` and use [`templates/cursor-environment-install.sh`](./templates/cursor-environment-install.sh) in the Cursor Environment **install** script. **Verify boot** is ticket **## Verify commands** plus optional bot env (`VERIFY_GLOBAL_BOOT_COMMANDS`, `VERIFY_BOOT_PACKAGES`) or rare app-repo `.jeichat/verify-boot.json`.
 
 ## Security
 
